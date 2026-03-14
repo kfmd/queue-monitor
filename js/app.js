@@ -14,36 +14,82 @@
 const { useState, useEffect, useRef, useCallback } = React;
 
 // ─────────────────────────────────────────────────────────
-// KOMPONEN: GRAFIK BULANAN
+// KOMPONEN: GRAFIK BULANAN (dengan year toggle)
 // ─────────────────────────────────────────────────────────
-function MonthChart({ data, color, sheetKey }) {
+function MonthChart({ data, color, sheetKey, startYear }) {
   const canvasRef = useRef(null);
-  const chartRef = useRef(null);
+  const chartRef  = useRef(null);
 
+  // Kumpulkan semua tahun yang tersedia dari data.keys
+  const availableYears = React.useMemo(() => {
+    if (!data || !data.keys) return [];
+    const ySet = new Set();
+    data.keys.forEach(k => ySet.add(parseInt(k.split("-")[0], 10)));
+    return Array.from(ySet).sort((a, b) => a - b);
+  }, [data]);
+
+  // Default: tahun sekarang; jika tidak ada data → tahun terakhir
+  const currentYear = new Date().getFullYear();
+  const defaultYear = availableYears.includes(currentYear)
+    ? currentYear
+    : (availableYears[availableYears.length - 1] || currentYear);
+
+  const [selectedYear, setSelectedYear] = useState(defaultYear);
+
+  // Reset ke tahun sekarang setiap kali data baru masuk
   useEffect(() => {
-    if (!canvasRef.current || !data || !data.keys) return;
+    setSelectedYear(
+      availableYears.includes(currentYear)
+        ? currentYear
+        : (availableYears[availableYears.length - 1] || currentYear)
+    );
+  }, [sheetKey]);
 
-    // Hancurkan instance lama sebelum membuat yang baru
-    if (chartRef.current) {
-      chartRef.current.destroy();
-      chartRef.current = null;
-    }
+  // Filter keys & labels hanya untuk tahun yang dipilih
+  const filteredKeys = React.useMemo(() => {
+    if (!data || !data.keys) return [];
+    return data.keys.filter(k => k.startsWith(String(selectedYear) + "-"));
+  }, [data, selectedYear]);
 
-    const totals = data.keys.map(k => (data.monthly[k] || {}).total || 0);
-    const dones = data.keys.map(k => (data.monthly[k] || {}).done || 0);
+  const filteredLabels = React.useMemo(() => {
+    const BULAN = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agt","Sep","Okt","Nov","Des"];
+    return filteredKeys.map(k => BULAN[parseInt(k.split("-")[1], 10) - 1]);
+  }, [filteredKeys]);
 
-    // Warna transparan untuk bar
-    const hex2rgba = (hex, alpha) => {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      return `rgba(${r},${g},${b},${alpha})`;
-    };
+  // Hitung total per tahun untuk badge di tombol toggle
+  const yearTotals = React.useMemo(() => {
+    if (!data || !data.monthly) return {};
+    const totals = {};
+    availableYears.forEach(y => {
+      let t = 0;
+      data.keys
+        .filter(k => k.startsWith(String(y) + "-"))
+        .forEach(k => { t += (data.monthly[k] || {}).total || 0; });
+      totals[y] = t;
+    });
+    return totals;
+  }, [data, availableYears]);
+
+  const hex2rgba = (hex, alpha) => {
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  };
+
+  // Buat / update chart setiap kali filtered data berubah
+  useEffect(() => {
+    if (!canvasRef.current || filteredKeys.length === 0) return;
+
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
+
+    const totals = filteredKeys.map(k => (data.monthly[k] || {}).total || 0);
+    const dones  = filteredKeys.map(k => (data.monthly[k] || {}).done  || 0);
 
     chartRef.current = new Chart(canvasRef.current.getContext("2d"), {
       type: "bar",
       data: {
-        labels: data.labels,
+        labels: filteredLabels,
         datasets: [
           {
             label: "Total Request",
@@ -51,7 +97,7 @@ function MonthChart({ data, color, sheetKey }) {
             backgroundColor: hex2rgba(color, 0.75),
             borderColor: color,
             borderWidth: 1.5,
-            borderRadius: 5,
+            borderRadius: 6,
             borderSkipped: false,
           },
           {
@@ -60,19 +106,23 @@ function MonthChart({ data, color, sheetKey }) {
             backgroundColor: "rgba(5, 150, 105, 0.75)",
             borderColor: "#059669",
             borderWidth: 1.5,
-            borderRadius: 5,
+            borderRadius: 6,
             borderSkipped: false,
           },
         ],
       },
       options: {
-        responsive: false,
+        responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         plugins: {
           legend: {
             position: "top",
-            labels: { font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }, padding: 12, boxWidth: 12, boxHeight: 12 },
+            align: "end",
+            labels: {
+              font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" },
+              padding: 14, boxWidth: 12, boxHeight: 12,
+            },
           },
           tooltip: {
             backgroundColor: "#1e293b",
@@ -80,12 +130,21 @@ function MonthChart({ data, color, sheetKey }) {
             bodyFont: { size: 11 },
             padding: 10,
             cornerRadius: 8,
+            callbacks: {
+              afterBody: (items) => {
+                const idx   = items[0].dataIndex;
+                const total = totals[idx] || 0;
+                const done  = dones[idx]  || 0;
+                const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+                return [`Progres: ${pct}%`];
+              },
+            },
           },
         },
         scales: {
           x: {
             grid: { display: false },
-            ticks: { font: { size: 10 }, maxRotation: 50, minRotation: 30 },
+            ticks: { font: { size: 11, weight: "600" }, color: "#475569" },
           },
           y: {
             beginAtZero: true,
@@ -97,23 +156,43 @@ function MonthChart({ data, color, sheetKey }) {
             },
           },
         },
+        animation: { duration: 350, easing: "easeOutQuart" },
       },
     });
 
     return () => {
       if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
     };
-  }, [data, color]);
+  }, [filteredKeys, filteredLabels, color, data]);
 
-  if (!data || !data.keys || data.keys.length === 0) return null;
-
-  // Lebar kanvas: minimal 600px, per-bulan 46px
-  const chartW = Math.max(data.keys.length * 46, 600);
+  if (!data || !data.keys || availableYears.length === 0) return null;
 
   return (
-    <div className="chart-scroll">
-      <div style={{ width: chartW + "px", height: "220px" }}>
-        <canvas ref={canvasRef} width={chartW} height={220} />
+    <div className="chart-with-toggle">
+      {/* ── Year Toggle Buttons ── */}
+      <div className="year-toggle-bar">
+        {availableYears.map(y => (
+          <button
+            key={y}
+            className={`year-btn ${selectedYear === y ? "active" : ""}`}
+            style={selectedYear === y ? { background: color, borderColor: color } : {}}
+            onClick={() => setSelectedYear(y)}
+          >
+            {y}
+            {yearTotals[y] > 0 && (
+              <span className="year-badge">{yearTotals[y]}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Chart Canvas (responsive, fills container) ── */}
+      <div className="chart-canvas-wrap">
+        {filteredKeys.length > 0 ? (
+          <canvas ref={canvasRef} />
+        ) : (
+          <p className="no-data">Tidak ada data untuk tahun {selectedYear}</p>
+        )}
       </div>
     </div>
   );
@@ -124,9 +203,9 @@ function MonthChart({ data, color, sheetKey }) {
 // ─────────────────────────────────────────────────────────
 function StatCard({ label, value, icon, variant }) {
   const variants = {
-    blue: { bg: "#dbeafe", text: "#1e40af", border: "#93c5fd" },
-    green: { bg: "#d1fae5", text: "#065f46", border: "#6ee7b7" },
-    amber: { bg: "#fef3c7", text: "#92400e", border: "#fcd34d" },
+    blue:   { bg: "#dbeafe", text: "#1e40af", border: "#93c5fd" },
+    green:  { bg: "#d1fae5", text: "#065f46", border: "#6ee7b7" },
+    amber:  { bg: "#fef3c7", text: "#92400e", border: "#fcd34d" },
   };
   const v = variants[variant] || variants.blue;
   return (
@@ -199,9 +278,9 @@ function QueueSection({ sheetKey, sheetCfg, data, loading }) {
             <>
               {/* Statistik angka */}
               <div className="stat-row">
-                <StatCard label="Total Request" value={data?.total} icon="📋" variant="blue" />
-                <StatCard label="Selesai" value={data?.done} icon="✅" variant="green" />
-                <StatCard label="Dalam Antrean" value={data?.inQueue} icon="⏳" variant="amber" />
+                <StatCard label="Total Request" value={data?.total}   icon="📋" variant="blue"  />
+                <StatCard label="Selesai"        value={data?.done}    icon="✅" variant="green" />
+                <StatCard label="Dalam Antrean"  value={data?.inQueue} icon="⏳" variant="amber" />
               </div>
 
               {/* Progress bar visual */}
@@ -226,7 +305,7 @@ function QueueSection({ sheetKey, sheetCfg, data, loading }) {
               <div className="chart-section">
                 <h3 className="chart-heading">📊 Statistik Bulanan</h3>
                 {data && data.keys && data.keys.length > 0 ? (
-                  <MonthChart data={data} color={sheetCfg.color} sheetKey={sheetKey} />
+                  <MonthChart data={data} color={sheetCfg.color} sheetKey={sheetKey} startYear={sheetCfg.startYear} />
                 ) : (
                   <p className="no-data">Tidak ada data grafik</p>
                 )}
@@ -285,9 +364,9 @@ function AppHeader({ config, onRefresh, refreshing, lastUpdated }) {
 // ROOT APLIKASI
 // ─────────────────────────────────────────────────────────
 function App() {
-  const [config, setConfig] = useState(() => window.QueueApp.Config.get());
-  const [data, setData] = useState({});
-  const [loading, setLoading] = useState({ design: true, video: true, printing: true });
+  const [config, setConfig]         = useState(() => window.QueueApp.Config.get());
+  const [data, setData]             = useState({});
+  const [loading, setLoading]       = useState({ design: true, video: true, printing: true });
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
 
@@ -340,8 +419,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>Sistem Monitoring Antrean Humas RSU Islam Klaten</p>
-        <p>Dibuat oleh <b>dr. Khariz Fahrurrozi </b>— <a href="https://kfmd.notion.site">kfmd.notion.site</a></p>
+        <p>Sistem Monitoring Antrean · Humas RSU Islam Klaten</p>
         <p style={{ fontSize: "0.75rem", opacity: 0.6 }}>
           Data bersumber dari Google Sheets · Refresh otomatis setiap {config.refreshInterval || 300} detik
         </p>
