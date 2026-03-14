@@ -1,5 +1,7 @@
 # 📋 Sistem Monitoring Antrean Humas RSU Islam Klaten
 
+### v1.3
+
 Dashboard monitoring permintaan desain, video/dokumentasi, dan cetak kolektif.
 
 ---
@@ -27,13 +29,16 @@ queue-monitor/
 > karena browser memblokir fetch() dari `file://`. Gunakan salah satu cara di bawah.
 
 ### Cara 1 — VS Code Live Server (Mudah, Rekomendasi)
+
 1. Install ekstensi **Live Server** di VS Code
 2. Buka folder `queue-monitor` di VS Code
 3. Klik kanan `index.html` → **Open with Live Server**
 4. Browser otomatis terbuka di `http://127.0.0.1:5500`
 
 ### Cara 2 — Python (tanpa instalasi tambahan)
+
 Buka terminal di folder `queue-monitor`, jalankan:
+
 ```bash
 # Python 3
 python -m http.server 8080
@@ -42,12 +47,14 @@ python -m http.server 8080
 ```
 
 ### Cara 3 — Node.js
+
 ```bash
 npx serve .
 # Lalu buka browser di URL yang muncul
 ```
 
 ### Hosting Online
+
 Bisa di-upload ke mana saja: **Netlify, Vercel, GitHub Pages, cPanel, Apache/Nginx** — cukup upload semua file dengan struktur folder yang sama.
 
 ---
@@ -112,15 +119,18 @@ Buka `admin.html`, login, lalu:
 ## ❓ Troubleshooting
 
 **Data tidak muncul / error merah:**
+
 - Pastikan spreadsheet sudah diset "Anyone with the link can view"
 - Pastikan URL di Admin Panel sudah benar (bisa paste URL edit biasa)
 - Periksa koneksi internet
 
 **Grafik kosong (semua 0):**
+
 - Cek kolom tanggal di Admin Panel — pastikan huruf kolom sesuai isi spreadsheet
 - Format tanggal yang didukung: DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD
 
 **Halaman tidak bisa dibuka (CORS error):**
+
 - Jangan buka dengan double-click; gunakan Live Server atau `python -m http.server`
 
 ---
