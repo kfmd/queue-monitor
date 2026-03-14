@@ -293,7 +293,7 @@ function App() {
 
   const loadAll = useCallback(async () => {
     setRefreshing(true);
-    const cfg = window.QueueApp.Config.get();
+    const cfg = await window.QueueApp.Config.load();
     setConfig(cfg);
 
     // Mulai fetch semua sheet secara paralel

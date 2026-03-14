@@ -1,15 +1,8 @@
 /**
- * admin.js — Panel Admin (React)
- * Login → Panel manajemen konfigurasi
- *
- * Komponen:
- * - AdminApp     : Root (router login ↔ panel)
- * - LoginForm    : Form username + password
- * - AdminPanel   : Panel utama dengan sidebar + tab
- *   - TabGeneral     : Judul, interval refresh, utilitas
- *   - TabSheets      : Konfigurasi tiap Google Sheet
- *   - TabAppearance  : Warna tema + pratinjau
- *   - TabSecurity    : Ubah password
+ * admin.js — Panel Admin (React) v3
+ * - Password default disembunyikan di form login
+ * - Config/cache menggunakan IndexedDB via db.js
+ * - Tab Spreadsheet: tambah field anchorColumn
  */
 
 /* global React, ReactDOM, QueueApp */
@@ -19,14 +12,14 @@ const { useState, useEffect } = React;
 // KOMPONEN: FORM LOGIN
 // ─────────────────────────────────────────────────────────
 function LoginForm({ onLogin }) {
-  const [user, setUser]   = useState("");
-  const [pass, setPass]   = useState("");
-  const [err,  setErr]    = useState("");
-  const [show, setShow]   = useState(false);
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
+  const [err,  setErr]  = useState("");
+  const [show, setShow] = useState(false);
 
   function handleSubmit(e) {
     e.preventDefault();
-    const cfg = window.QueueApp.Config.get();
+    const cfg = window.QueueApp.Config.get(); // sinkronis untuk login
     if (user === "admin" && pass === cfg.password) {
       setErr("");
       onLogin();
@@ -51,7 +44,7 @@ function LoginForm({ onLogin }) {
               className="field-input"
               value={user}
               onChange={e => setUser(e.target.value)}
-              placeholder="admin"
+              placeholder="Masukkan username"
               autoComplete="username"
               required
             />
@@ -65,7 +58,7 @@ function LoginForm({ onLogin }) {
                 className="field-input"
                 value={pass}
                 onChange={e => setPass(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Masukkan password"
                 autoComplete="current-password"
                 required
               />
@@ -80,9 +73,7 @@ function LoginForm({ onLogin }) {
           <button type="submit" className="btn-login">Masuk</button>
         </form>
 
-        <div className="login-hint">
-          Password default: <code>humas2024</code>
-        </div>
+        {/* Password default TIDAK ditampilkan di sini untuk keamanan */}
 
         <a href="index.html" className="back-link">← Kembali ke Dashboard</a>
       </div>
@@ -94,16 +85,22 @@ function LoginForm({ onLogin }) {
 // TAB: UMUM
 // ─────────────────────────────────────────────────────────
 function TabGeneral({ config, setConfig }) {
-  function clearCache() {
-    window.QueueApp.DataService.clearCache();
-    alert("✅ Cache berhasil dihapus. Data akan diperbarui saat dashboard dibuka.");
+  const [clearing, setClearing] = useState(false);
+  const [clearMsg, setClearMsg] = useState("");
+
+  async function clearCache() {
+    setClearing(true);
+    await window.QueueApp.DataService.clearCache();
+    setClearing(false);
+    setClearMsg("✅ Cache berhasil dihapus dari database lokal.");
+    setTimeout(() => setClearMsg(""), 4000);
   }
 
-  function resetAll() {
+  async function resetAll() {
     if (confirm("⚠️ Reset semua pengaturan ke default?\n\nTindakan ini tidak dapat dibatalkan.")) {
-      const def = window.QueueApp.Config.reset();
+      const def = await window.QueueApp.Config.reset();
       setConfig(def);
-      alert("Pengaturan berhasil direset.");
+      alert("Pengaturan berhasil direset ke default.");
     }
   }
 
@@ -115,30 +112,25 @@ function TabGeneral({ config, setConfig }) {
         <div className="field">
           <label className="field-label">Judul Utama Dashboard</label>
           <input
-            type="text"
-            className="field-input"
+            type="text" className="field-input"
             value={config.title}
             onChange={e => setConfig(p => ({ ...p, title: e.target.value }))}
-            placeholder="Contoh: Monitoring Antrean RSU Islam Klaten"
           />
         </div>
 
         <div className="field">
           <label className="field-label">Subjudul <span className="optional">(opsional)</span></label>
           <input
-            type="text"
-            className="field-input"
+            type="text" className="field-input"
             value={config.subtitle || ""}
             onChange={e => setConfig(p => ({ ...p, subtitle: e.target.value }))}
-            placeholder="Contoh: Humas RSU Islam Klaten"
           />
         </div>
 
         <div className="field">
           <label className="field-label">Interval Refresh Otomatis (detik)</label>
           <input
-            type="number"
-            className="field-input field-input-sm"
+            type="number" className="field-input field-input-sm"
             value={config.refreshInterval || 300}
             min={30} max={3600}
             onChange={e => setConfig(p => ({ ...p, refreshInterval: parseInt(e.target.value) || 300 }))}
@@ -148,19 +140,27 @@ function TabGeneral({ config, setConfig }) {
       </section>
 
       <section className="form-section">
-        <h3 className="section-title">Utilitas</h3>
+        <h3 className="section-title">Utilitas Database</h3>
+
+        <div className="info-box" style={{marginBottom:"1rem"}}>
+          <p>💾 Data disimpan di <strong>IndexedDB</strong> — database lokal browser yang sesungguhnya, bukan sekadar cache.</p>
+          <p>Data tetap tersedia saat offline. Untuk melihat isi database, buka DevTools → Application → IndexedDB → <code>QueueAppDB</code>.</p>
+        </div>
+
         <div className="btn-group-stack">
-          <button className="btn-util danger" onClick={clearCache}>
-            🗑 Hapus Cache Data Lokal
+          <button
+            className="btn-util danger"
+            onClick={clearCache}
+            disabled={clearing}
+          >
+            {clearing ? "⏳ Menghapus…" : "🗑 Hapus Cache dari Database Lokal"}
           </button>
           <button className="btn-util warning" onClick={resetAll}>
             🔄 Reset Semua Pengaturan ke Default
           </button>
         </div>
-        <div className="info-box">
-          <p>💡 <strong>Cache</strong> disimpan di browser Anda sehingga data tetap tampil saat offline.</p>
-          <p>Cache dihapus otomatis saat Anda mengubah URL spreadsheet.</p>
-        </div>
+
+        {clearMsg && <div className="alert alert-ok" style={{marginTop:"0.75rem"}}>{clearMsg}</div>}
       </section>
     </div>
   );
@@ -171,116 +171,94 @@ function TabGeneral({ config, setConfig }) {
 // ─────────────────────────────────────────────────────────
 function TabSheets({ config, setConfig }) {
   const SHEET_META = {
-    design:   { label: "Design",         icon: "✏️" },
+    design:   { label: "Design",            icon: "✏️"  },
     video:    { label: "Dokumentasi/Video", icon: "🎬" },
-    printing: { label: "Cetak Kolektif", icon: "🖨️" },
+    printing: { label: "Cetak Kolektif",    icon: "🖨️" },
   };
 
   function updateSheet(key, field, value) {
     setConfig(p => ({
       ...p,
-      sheets: {
-        ...p.sheets,
-        [key]: { ...p.sheets[key], [field]: value },
-      },
+      sheets: { ...p.sheets, [key]: { ...p.sheets[key], [field]: value } },
     }));
+    // Hapus cache sheet ini saat URL berubah agar data segar diambil
+    if (field === "editUrl") {
+      window.QueueApp.DB.deleteCache(key).catch(() => {});
+    }
   }
 
   return (
     <div className="tab-body">
       <div className="info-box info-important">
-        <strong>⚠️ Penting:</strong> Agar data dapat diambil, setiap Google Sheets HARUS diatur ke
-        <strong> "Anyone with the link can view"</strong> (siapa saja dengan link bisa melihat).
-        Buka spreadsheet → Share → ubah akses.
+        <strong>⚠️ Penting:</strong> Setiap Google Sheets HARUS diatur ke
+        <strong> "Anyone with the link can view"</strong>.
+        Buka spreadsheet → tombol <strong>Share</strong> → ubah "General access" → simpan.
       </div>
 
       {Object.entries(config.sheets).map(([key, sheet]) => {
         const meta = SHEET_META[key] || {};
         return (
-          <section key={key} className="form-section sheet-section" style={{ "--sc": sheet.color }}>
-            <h3 className="section-title sheet-title" style={{ color: sheet.color }}>
+          <section key={key} className="form-section sheet-section" style={{"--sc": sheet.color}}>
+            <h3 className="section-title sheet-title" style={{color: sheet.color}}>
               {meta.icon} {meta.label}
             </h3>
 
             <div className="field">
               <label className="field-label">Nama Tampilan</label>
-              <input
-                type="text"
-                className="field-input"
+              <input type="text" className="field-input"
                 value={sheet.name}
-                onChange={e => updateSheet(key, "name", e.target.value)}
-              />
+                onChange={e => updateSheet(key, "name", e.target.value)} />
             </div>
 
             <div className="field">
               <label className="field-label">URL Google Sheets</label>
-              <textarea
-                className="field-input field-textarea"
+              <textarea className="field-input field-textarea" rows={2}
                 value={sheet.editUrl || ""}
-                rows={2}
                 placeholder="Paste URL Google Sheets di sini..."
-                onChange={e => {
-                  const url = e.target.value.trim();
-                  updateSheet(key, "editUrl", url);
-                  // Bersihkan cache untuk sheet ini saat URL berubah
-                  try { localStorage.removeItem("queueapp_cache_" + key); } catch (_) {}
-                }}
-              />
-              <span className="field-hint">
-                Salin dari address bar saat membuka spreadsheet, atau dari tombol Share.
-                Format edit atau share URL keduanya diterima.
-              </span>
+                onChange={e => updateSheet(key, "editUrl", e.target.value.trim())} />
+              <span className="field-hint">Salin dari address bar atau tombol Share. Format edit/share URL keduanya diterima.</span>
             </div>
 
             <div className="field-row">
               <div className="field">
-                <label className="field-label">Kolom Status (Selesai)</label>
-                <input
-                  type="text"
-                  className="field-input field-input-xs"
-                  value={sheet.statusColumn}
-                  maxLength={2}
-                  placeholder="O"
-                  onChange={e => updateSheet(key, "statusColumn", e.target.value.toUpperCase())}
-                />
-                <span className="field-hint">Kolom dengan checkbox TRUE/FALSE</span>
+                <label className="field-label">Kolom Status Selesai</label>
+                <input type="text" className="field-input field-input-xs"
+                  value={sheet.statusColumn} maxLength={2} placeholder="O"
+                  onChange={e => updateSheet(key, "statusColumn", e.target.value.toUpperCase())} />
+                <span className="field-hint">Kolom checkbox TRUE/FALSE</span>
               </div>
 
               <div className="field">
                 <label className="field-label">Kolom Tanggal</label>
-                <input
-                  type="text"
-                  className="field-input field-input-xs"
-                  value={sheet.dateColumn}
-                  maxLength={2}
-                  placeholder="B"
-                  onChange={e => updateSheet(key, "dateColumn", e.target.value.toUpperCase())}
-                />
-                <span className="field-hint">Kolom berisi tanggal permintaan</span>
+                <input type="text" className="field-input field-input-xs"
+                  value={sheet.dateColumn} maxLength={2} placeholder="B"
+                  onChange={e => updateSheet(key, "dateColumn", e.target.value.toUpperCase())} />
+                <span className="field-hint">Tanggal permintaan (untuk grafik)</span>
+              </div>
+
+              <div className="field">
+                <label className="field-label">Kolom Anchor</label>
+                <input type="text" className="field-input field-input-xs"
+                  value={sheet.anchorColumn || "A"} maxLength={2} placeholder="A"
+                  onChange={e => updateSheet(key, "anchorColumn", e.target.value.toUpperCase())} />
+                <span className="field-hint">Kolom penanda baris nyata (biasanya A = Timestamp Google Forms)</span>
               </div>
 
               <div className="field">
                 <label className="field-label">Tahun Awal Grafik</label>
-                <input
-                  type="number"
-                  className="field-input field-input-xs"
-                  value={sheet.startYear}
-                  min={2020} max={2030}
-                  onChange={e => updateSheet(key, "startYear", parseInt(e.target.value) || 2023)}
-                />
+                <input type="number" className="field-input field-input-xs"
+                  value={sheet.startYear} min={2020} max={2030}
+                  onChange={e => updateSheet(key, "startYear", parseInt(e.target.value) || 2023)} />
               </div>
             </div>
 
             <div className="field">
               <label className="field-label">Warna Kartu</label>
               <div className="color-row">
-                <input
-                  type="color"
-                  className="color-pick"
+                <input type="color" className="color-pick"
                   value={sheet.color}
-                  onChange={e => updateSheet(key, "color", e.target.value)}
-                />
-                <span className="color-chip" style={{ background: sheet.color }}>{sheet.color}</span>
+                  onChange={e => updateSheet(key, "color", e.target.value)} />
+                <span className="color-chip" style={{background: sheet.color}}>{sheet.color}</span>
               </div>
             </div>
           </section>
@@ -295,10 +273,10 @@ function TabSheets({ config, setConfig }) {
 // ─────────────────────────────────────────────────────────
 function TabAppearance({ config, setConfig }) {
   const colors = [
-    { key: "primary",   label: "Warna Header",           hint: "Latar belakang header utama" },
-    { key: "secondary", label: "Warna Aksen Sekunder",   hint: "Untuk elemen sekunder" },
-    { key: "tertiary",  label: "Warna Aksen Tersier",    hint: "Untuk elemen tersier" },
-    { key: "bg",        label: "Warna Latar Halaman",    hint: "Background keseluruhan halaman" },
+    { key: "primary",   label: "Warna Header",        hint: "Latar belakang header utama" },
+    { key: "secondary", label: "Warna Aksen Sekunder", hint: "Untuk elemen sekunder"       },
+    { key: "tertiary",  label: "Warna Aksen Tersier",  hint: "Untuk elemen tersier"        },
+    { key: "bg",        label: "Warna Latar Halaman",  hint: "Background keseluruhan"      },
   ];
 
   function updateTheme(k, v) {
@@ -309,19 +287,15 @@ function TabAppearance({ config, setConfig }) {
     <div className="tab-body">
       <section className="form-section">
         <h3 className="section-title">Warna Tema</h3>
-
         <div className="color-grid">
           {colors.map(({ key, label, hint }) => (
             <div key={key} className="field">
               <label className="field-label">{label}</label>
               <div className="color-row">
-                <input
-                  type="color"
-                  className="color-pick"
+                <input type="color" className="color-pick"
                   value={config.theme[key] || "#000000"}
-                  onChange={e => updateTheme(key, e.target.value)}
-                />
-                <span className="color-chip" style={{ background: config.theme[key] }}>
+                  onChange={e => updateTheme(key, e.target.value)} />
+                <span className="color-chip" style={{background: config.theme[key]}}>
                   {config.theme[key]}
                 </span>
               </div>
@@ -331,19 +305,18 @@ function TabAppearance({ config, setConfig }) {
         </div>
       </section>
 
-      {/* Pratinjau langsung */}
       <section className="form-section">
         <h3 className="section-title">Pratinjau</h3>
-        <div className="preview-box" style={{ background: config.theme.bg }}>
-          <div className="prev-header" style={{ background: config.theme.primary }}>
+        <div className="preview-box" style={{background: config.theme.bg}}>
+          <div className="prev-header" style={{background: config.theme.primary}}>
             <span>🏥 {config.title || "Sistem Monitoring"}</span>
-            <span style={{ fontSize: "0.75rem", opacity: 0.8 }}>{config.subtitle}</span>
+            <span style={{fontSize:"0.75rem", opacity:0.8}}>{config.subtitle}</span>
           </div>
           <div className="prev-cards">
             {Object.values(config.sheets).map((s, i) => (
-              <div key={i} className="prev-card" style={{ borderTopColor: s.color }}>
+              <div key={i} className="prev-card" style={{borderTopColor: s.color}}>
                 <span>{s.icon}</span>
-                <span style={{ fontSize: "0.75rem" }}>{s.name}</span>
+                <span style={{fontSize:"0.75rem"}}>{s.name}</span>
               </div>
             ))}
           </div>
@@ -357,21 +330,25 @@ function TabAppearance({ config, setConfig }) {
 // TAB: KEAMANAN
 // ─────────────────────────────────────────────────────────
 function TabSecurity({ config, setConfig }) {
+  const [curPw,  setCurPw]  = useState("");
   const [newPw,  setNewPw]  = useState("");
   const [confPw, setConfPw] = useState("");
   const [err,    setErr]    = useState("");
   const [ok,     setOk]     = useState("");
 
-  function handleChange() {
+  async function handleChange() {
     setErr(""); setOk("");
-    if (!newPw)             return setErr("Password baru tidak boleh kosong.");
-    if (newPw.length < 6)   return setErr("Password minimal 6 karakter.");
-    if (newPw !== confPw)   return setErr("Konfirmasi password tidak cocok.");
+
+    // Verifikasi password lama
+    if (curPw !== config.password) return setErr("Password saat ini salah.");
+    if (!newPw)                   return setErr("Password baru tidak boleh kosong.");
+    if (newPw.length < 6)         return setErr("Password baru minimal 6 karakter.");
+    if (newPw !== confPw)         return setErr("Konfirmasi password tidak cocok.");
 
     const updated = { ...config, password: newPw };
+    await window.QueueApp.Config.save(updated);
     setConfig(updated);
-    window.QueueApp.Config.save(updated);
-    setNewPw(""); setConfPw("");
+    setCurPw(""); setNewPw(""); setConfPw("");
     setOk("✅ Password berhasil diubah!");
   }
 
@@ -382,27 +359,30 @@ function TabSecurity({ config, setConfig }) {
         <p className="section-desc">Username: <code>admin</code> (tidak dapat diubah)</p>
 
         <div className="field">
+          <label className="field-label">Password Saat Ini</label>
+          <input type="password" className="field-input"
+            value={curPw}
+            onChange={e => setCurPw(e.target.value)}
+            placeholder="Masukkan password saat ini"
+            autoComplete="current-password" />
+        </div>
+
+        <div className="field">
           <label className="field-label">Password Baru</label>
-          <input
-            type="password"
-            className="field-input"
+          <input type="password" className="field-input"
             value={newPw}
             onChange={e => setNewPw(e.target.value)}
             placeholder="Minimal 6 karakter"
-            autoComplete="new-password"
-          />
+            autoComplete="new-password" />
         </div>
 
         <div className="field">
           <label className="field-label">Konfirmasi Password Baru</label>
-          <input
-            type="password"
-            className="field-input"
+          <input type="password" className="field-input"
             value={confPw}
             onChange={e => setConfPw(e.target.value)}
             placeholder="Ulangi password baru"
-            autoComplete="new-password"
-          />
+            autoComplete="new-password" />
         </div>
 
         {err && <div className="alert alert-error">{err}</div>}
@@ -414,9 +394,9 @@ function TabSecurity({ config, setConfig }) {
       <section className="form-section">
         <h3 className="section-title">Catatan Keamanan</h3>
         <div className="info-box">
-          <p>⚠️ Konfigurasi dan password disimpan di <strong>localStorage</strong> browser — cocok untuk penggunaan intranet.</p>
-          <p>Jangan gunakan password yang sama dengan akun penting lainnya.</p>
-          <p>Untuk keamanan tingkat tinggi, pertimbangkan menggunakan server backend dengan autentikasi yang lebih kuat.</p>
+          <p>⚠️ Konfigurasi dan password disimpan di <strong>IndexedDB</strong> lokal browser — cocok untuk penggunaan intranet.</p>
+          <p>Password default awal adalah <code>humas2024</code> — segera ganti setelah login pertama kali.</p>
+          <p>Untuk melihat seluruh isi database: DevTools (F12) → Application → IndexedDB → <strong>QueueAppDB</strong>.</p>
         </div>
       </section>
     </div>
@@ -424,12 +404,18 @@ function TabSecurity({ config, setConfig }) {
 }
 
 // ─────────────────────────────────────────────────────────
-// KOMPONEN UTAMA: PANEL ADMIN
+// PANEL UTAMA ADMIN
 // ─────────────────────────────────────────────────────────
 function AdminPanel({ onLogout }) {
   const [config,    setConfig]    = useState(() => window.QueueApp.Config.get());
   const [activeTab, setActiveTab] = useState("general");
   const [saved,     setSaved]     = useState(false);
+  const [saving,    setSaving]    = useState(false);
+
+  // Muat config terbaru dari IndexedDB saat mount
+  useEffect(() => {
+    window.QueueApp.Config.load().then(cfg => setConfig(cfg));
+  }, []);
 
   const TABS = [
     { id: "general",    icon: "⚙️",  label: "Umum"         },
@@ -438,15 +424,16 @@ function AdminPanel({ onLogout }) {
     { id: "security",   icon: "🔒",  label: "Keamanan"     },
   ];
 
-  function handleSave() {
-    window.QueueApp.Config.save(config);
+  async function handleSave() {
+    setSaving(true);
+    await window.QueueApp.Config.save(config);
+    setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
 
   return (
     <div className="admin-layout">
-      {/* ── Sidebar ── */}
       <aside className="admin-sidebar">
         <div className="sidebar-brand">
           <span className="brand-icon">📋</span>
@@ -458,11 +445,9 @@ function AdminPanel({ onLogout }) {
 
         <nav className="sidebar-nav">
           {TABS.map(t => (
-            <button
-              key={t.id}
-              className={`nav-btn ${activeTab === t.id ? "active" : ""}`}
-              onClick={() => setActiveTab(t.id)}
-            >
+            <button key={t.id}
+              className={"nav-btn " + (activeTab === t.id ? "active" : "")}
+              onClick={() => setActiveTab(t.id)}>
               <span className="nav-icon">{t.icon}</span>
               <span>{t.label}</span>
             </button>
@@ -475,20 +460,18 @@ function AdminPanel({ onLogout }) {
         </div>
       </aside>
 
-      {/* ── Konten Utama ── */}
       <div className="admin-main">
         <div className="admin-topbar">
           <h2 className="topbar-title">
-            {TABS.find(t => t.id === activeTab)?.icon}{" "}
-            {TABS.find(t => t.id === activeTab)?.label}
+            {(TABS.find(t => t.id === activeTab) || {}).icon}{" "}
+            {(TABS.find(t => t.id === activeTab) || {}).label}
           </h2>
-
           {activeTab !== "security" && (
             <button
-              className={`btn-save ${saved ? "saved" : ""}`}
+              className={"btn-save " + (saved ? "saved" : "")}
               onClick={handleSave}
-            >
-              {saved ? "✓ Tersimpan!" : "💾 Simpan Perubahan"}
+              disabled={saving}>
+              {saving ? "⏳ Menyimpan…" : saved ? "✓ Tersimpan!" : "💾 Simpan Perubahan"}
             </button>
           )}
         </div>
@@ -511,7 +494,6 @@ function AdminApp() {
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Cek sesi aktif
     if (sessionStorage.getItem("queueapp_admin") === "yes") {
       setLoggedIn(true);
     }
