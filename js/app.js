@@ -101,7 +101,7 @@ function MonthChart({ data, color, sheetKey, startYear }) {
             borderSkipped: false,
           },
           {
-            label: "Selesai",
+            label: "Selesai Dilayani",
             data: dones,
             backgroundColor: "rgba(5, 150, 105, 0.75)",
             borderColor: "#059669",
@@ -279,7 +279,7 @@ function QueueSection({ sheetKey, sheetCfg, data, loading }) {
               {/* Statistik angka */}
               <div className="stat-row">
                 <StatCard label="Total Request" value={data?.total} icon="📋" variant="blue" />
-                <StatCard label="Selesai" value={data?.done} icon="✅" variant="green" />
+                <StatCard label="Selesai Dilayani" value={data?.done} icon="✅" variant="green" />
                 <StatCard label="Dalam Antrean" value={data?.inQueue} icon="⏳" variant="amber" />
               </div>
 
