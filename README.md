@@ -2,7 +2,11 @@
 
 ### v1.3
 
-Dashboard monitoring permintaan desain, video/dokumentasi, dan cetak kolektif.
+Dashboard monitoring permintaan desain, video/dokumentasi, dan cetak kolektif. Fetch data from google sheet.
+
+---
+## Preview
+<img width="2902" height="2198" alt="Queue Monitor Preview" src="https://github.com/user-attachments/assets/5026bbb7-d1bb-4c0d-846b-4f62187189f3" />
 
 ---
 
