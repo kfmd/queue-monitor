@@ -18,7 +18,7 @@ const { useState, useEffect, useRef, useCallback } = React;
 // ─────────────────────────────────────────────────────────
 function MonthChart({ data, color, sheetKey, startYear }) {
   const canvasRef = useRef(null);
-  const chartRef  = useRef(null);
+  const chartRef = useRef(null);
 
   // Kumpulkan semua tahun yang tersedia dari data.keys
   const availableYears = React.useMemo(() => {
@@ -52,7 +52,7 @@ function MonthChart({ data, color, sheetKey, startYear }) {
   }, [data, selectedYear]);
 
   const filteredLabels = React.useMemo(() => {
-    const BULAN = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agt","Sep","Okt","Nov","Des"];
+    const BULAN = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
     return filteredKeys.map(k => BULAN[parseInt(k.split("-")[1], 10) - 1]);
   }, [filteredKeys]);
 
@@ -71,9 +71,9 @@ function MonthChart({ data, color, sheetKey, startYear }) {
   }, [data, availableYears]);
 
   const hex2rgba = (hex, alpha) => {
-    const r = parseInt(hex.slice(1,3), 16);
-    const g = parseInt(hex.slice(3,5), 16);
-    const b = parseInt(hex.slice(5,7), 16);
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r},${g},${b},${alpha})`;
   };
 
@@ -84,7 +84,7 @@ function MonthChart({ data, color, sheetKey, startYear }) {
     if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
 
     const totals = filteredKeys.map(k => (data.monthly[k] || {}).total || 0);
-    const dones  = filteredKeys.map(k => (data.monthly[k] || {}).done  || 0);
+    const dones = filteredKeys.map(k => (data.monthly[k] || {}).done || 0);
 
     chartRef.current = new Chart(canvasRef.current.getContext("2d"), {
       type: "bar",
@@ -132,10 +132,10 @@ function MonthChart({ data, color, sheetKey, startYear }) {
             cornerRadius: 8,
             callbacks: {
               afterBody: (items) => {
-                const idx   = items[0].dataIndex;
+                const idx = items[0].dataIndex;
                 const total = totals[idx] || 0;
-                const done  = dones[idx]  || 0;
-                const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+                const done = dones[idx] || 0;
+                const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                 return [`Progres: ${pct}%`];
               },
             },
@@ -203,9 +203,9 @@ function MonthChart({ data, color, sheetKey, startYear }) {
 // ─────────────────────────────────────────────────────────
 function StatCard({ label, value, icon, variant }) {
   const variants = {
-    blue:   { bg: "#dbeafe", text: "#1e40af", border: "#93c5fd" },
-    green:  { bg: "#d1fae5", text: "#065f46", border: "#6ee7b7" },
-    amber:  { bg: "#fef3c7", text: "#92400e", border: "#fcd34d" },
+    blue: { bg: "#dbeafe", text: "#1e40af", border: "#93c5fd" },
+    green: { bg: "#d1fae5", text: "#065f46", border: "#6ee7b7" },
+    amber: { bg: "#fef3c7", text: "#92400e", border: "#fcd34d" },
   };
   const v = variants[variant] || variants.blue;
   return (
@@ -278,9 +278,9 @@ function QueueSection({ sheetKey, sheetCfg, data, loading }) {
             <>
               {/* Statistik angka */}
               <div className="stat-row">
-                <StatCard label="Total Request" value={data?.total}   icon="📋" variant="blue"  />
-                <StatCard label="Selesai"        value={data?.done}    icon="✅" variant="green" />
-                <StatCard label="Dalam Antrean"  value={data?.inQueue} icon="⏳" variant="amber" />
+                <StatCard label="Total Request" value={data?.total} icon="📋" variant="blue" />
+                <StatCard label="Selesai" value={data?.done} icon="✅" variant="green" />
+                <StatCard label="Dalam Antrean" value={data?.inQueue} icon="⏳" variant="amber" />
               </div>
 
               {/* Progress bar visual */}
@@ -364,9 +364,9 @@ function AppHeader({ config, onRefresh, refreshing, lastUpdated }) {
 // ROOT APLIKASI
 // ─────────────────────────────────────────────────────────
 function App() {
-  const [config, setConfig]         = useState(() => window.QueueApp.Config.get());
-  const [data, setData]             = useState({});
-  const [loading, setLoading]       = useState({ design: true, video: true, printing: true });
+  const [config, setConfig] = useState(() => window.QueueApp.Config.get());
+  const [data, setData] = useState({});
+  const [loading, setLoading] = useState({ design: true, video: true, printing: true });
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
 
@@ -420,6 +420,7 @@ function App() {
 
       <footer className="app-footer">
         <p>Sistem Monitoring Antrean · Humas RSU Islam Klaten</p>
+        <p>Dikembangkan oleh dr. Khariz Fahrurrozi · <a href="https://kfmd.notion.site" target="_blank">kfmd.notion.site</a></p>
         <p style={{ fontSize: "0.75rem", opacity: 0.6 }}>
           Data bersumber dari Google Sheets · Refresh otomatis setiap {config.refreshInterval || 300} detik
         </p>
