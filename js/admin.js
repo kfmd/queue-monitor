@@ -86,22 +86,38 @@ function LoginForm({ onLogin }) {
 // ─────────────────────────────────────────────────────────
 function TabGeneral({ config, setConfig }) {
   const [clearing, setClearing] = useState(false);
-  const [clearMsg, setClearMsg] = useState("");
+  const [msg, setMsg] = useState({ text: "", type: "" });
+
+  function showMsg(text, type) {
+    setMsg({ text, type });
+    setTimeout(() => setMsg({ text: "", type: "" }), 4000);
+  }
 
   async function clearCache() {
     setClearing(true);
     await window.QueueApp.DataService.clearCache();
     setClearing(false);
-    setClearMsg("✅ Cache berhasil dihapus dari database lokal.");
-    setTimeout(() => setClearMsg(""), 4000);
+    showMsg("✅ Cache berhasil dihapus dari database lokal.", "ok");
   }
 
   async function resetAll() {
     if (confirm("⚠️ Reset semua pengaturan ke default?\n\nTindakan ini tidak dapat dibatalkan.")) {
       const def = await window.QueueApp.Config.reset();
       setConfig(def);
-      alert("Pengaturan berhasil direset ke default.");
+      showMsg("✅ Pengaturan berhasil direset ke default.", "ok");
     }
+  }
+
+  function downloadConfigJSON() {
+    const json = window.QueueApp.Config.exportJSON(config);
+    const blob = new Blob([json], { type: "application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = "config.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    showMsg("📥 config.json berhasil diunduh! Ganti file lama di folder server.", "ok");
   }
 
   return (
@@ -111,56 +127,76 @@ function TabGeneral({ config, setConfig }) {
 
         <div className="field">
           <label className="field-label">Judul Utama Dashboard</label>
-          <input
-            type="text" className="field-input"
+          <input type="text" className="field-input"
             value={config.title}
-            onChange={e => setConfig(p => ({ ...p, title: e.target.value }))}
-          />
+            onChange={e => setConfig(p => ({ ...p, title: e.target.value }))} />
         </div>
 
         <div className="field">
           <label className="field-label">Subjudul <span className="optional">(opsional)</span></label>
-          <input
-            type="text" className="field-input"
+          <input type="text" className="field-input"
             value={config.subtitle || ""}
-            onChange={e => setConfig(p => ({ ...p, subtitle: e.target.value }))}
-          />
+            onChange={e => setConfig(p => ({ ...p, subtitle: e.target.value }))} />
         </div>
 
         <div className="field">
           <label className="field-label">Interval Refresh Otomatis (detik)</label>
-          <input
-            type="number" className="field-input field-input-sm"
+          <input type="number" className="field-input field-input-sm"
             value={config.refreshInterval || 300}
             min={30} max={3600}
-            onChange={e => setConfig(p => ({ ...p, refreshInterval: parseInt(e.target.value) || 300 }))}
-          />
+            onChange={e => setConfig(p => ({ ...p, refreshInterval: parseInt(e.target.value) || 300 }))} />
           <span className="field-hint">Minimal 30 detik · Default 300 detik (5 menit)</span>
         </div>
+      </section>
+
+      {/* ── Sinkronisasi Lintas Perangkat ─────────────────── */}
+      <section className="form-section">
+        <h3 className="section-title">🔄 Sinkronisasi Lintas Perangkat</h3>
+
+        <div className="info-box" style={{ marginBottom: "1rem" }}>
+          <p>
+            <strong>Cara kerja:</strong> Aplikasi membaca <code>config.json</code> dari folder server saat halaman dibuka.
+            Semua perangkat yang mengakses server yang sama akan mendapat konfigurasi yang sama.
+          </p>
+          <p style={{ marginTop: "0.4rem" }}>
+            <strong>Langkah update:</strong>
+          </p>
+          <ol style={{ marginLeft: "1rem", lineHeight: "1.8" }}>
+            <li>Ubah pengaturan di tab mana saja</li>
+            <li>Klik <strong>Simpan Perubahan</strong> di bagian atas</li>
+            <li>Klik <strong>Download config.json</strong> di bawah ini</li>
+            <li>Ganti file <code>config.json</code> lama di folder server/hosting</li>
+            <li>Semua perangkat otomatis pakai konfigurasi baru saat halaman di-refresh</li>
+          </ol>
+        </div>
+
+        <button className="btn-download-cfg" onClick={downloadConfigJSON}>
+          📥 Download config.json
+        </button>
       </section>
 
       <section className="form-section">
         <h3 className="section-title">Utilitas Database</h3>
 
-        <div className="info-box" style={{marginBottom:"1rem"}}>
-          <p>💾 Data disimpan di <strong>IndexedDB</strong> — database lokal browser yang sesungguhnya, bukan sekadar cache.</p>
-          <p>Data tetap tersedia saat offline. Untuk melihat isi database, buka DevTools → Application → IndexedDB → <code>QueueAppDB</code>.</p>
+        <div className="info-box" style={{ marginBottom: "1rem" }}>
+          <p>💾 Cache data sheet disimpan di <strong>IndexedDB</strong> browser lokal perangkat ini.</p>
+          <p>Untuk melihat isi: DevTools (F12) → Application → IndexedDB → <code>QueueAppDB</code>.</p>
         </div>
 
         <div className="btn-group-stack">
-          <button
-            className="btn-util danger"
-            onClick={clearCache}
-            disabled={clearing}
-          >
-            {clearing ? "⏳ Menghapus…" : "🗑 Hapus Cache dari Database Lokal"}
+          <button className="btn-util danger" onClick={clearCache} disabled={clearing}>
+            {clearing ? "⏳ Menghapus…" : "🗑 Hapus Cache Data Lokal"}
           </button>
           <button className="btn-util warning" onClick={resetAll}>
             🔄 Reset Semua Pengaturan ke Default
           </button>
         </div>
 
-        {clearMsg && <div className="alert alert-ok" style={{marginTop:"0.75rem"}}>{clearMsg}</div>}
+        {msg.text && (
+          <div className={"alert " + (msg.type === "ok" ? "alert-ok" : "alert-error")} style={{ marginTop: "0.75rem" }}>
+            {msg.text}
+          </div>
+        )}
       </section>
     </div>
   );

@@ -101,7 +101,7 @@ function MonthChart({ data, color, sheetKey, startYear }) {
             borderSkipped: false,
           },
           {
-            label: "Selesai Dilayani",
+            label: "Selesai",
             data: dones,
             backgroundColor: "rgba(5, 150, 105, 0.75)",
             borderColor: "#059669",
@@ -168,30 +168,67 @@ function MonthChart({ data, color, sheetKey, startYear }) {
   if (!data || !data.keys || availableYears.length === 0) return null;
 
   return (
-    <div className="chart-with-toggle">
-      {/* ── Year Toggle Buttons ── */}
-      <div className="year-toggle-bar">
-        {availableYears.map(y => (
-          <button
-            key={y}
-            className={`year-btn ${selectedYear === y ? "active" : ""}`}
-            style={selectedYear === y ? { background: color, borderColor: color } : {}}
-            onClick={() => setSelectedYear(y)}
-          >
-            {y}
-            {yearTotals[y] > 0 && (
-              <span className="year-badge">{yearTotals[y]}</span>
-            )}
-          </button>
-        ))}
+    <div style={{ display:"flex", flexDirection:"column", gap:"0.75rem" }}>
+
+      {/* ── Year Toggle Buttons — inline styles guarantee correct render on all devices ── */}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:"6px", alignItems:"center" }}>
+        {availableYears.map(y => {
+          const isActive = selectedYear === y;
+          return (
+            <button
+              key={y}
+              onClick={() => setSelectedYear(y)}
+              style={{
+                display:        "inline-flex",
+                alignItems:     "center",
+                gap:            "5px",
+                padding:        "4px 14px",
+                borderRadius:   "999px",
+                border:         isActive ? "1.5px solid transparent" : "1.5px solid #d1d5db",
+                background:     isActive ? color : "#f8fafc",
+                color:          isActive ? "#fff" : "#475569",
+                fontFamily:     "'Plus Jakarta Sans', system-ui, sans-serif",
+                fontSize:       "0.8rem",
+                fontWeight:     "700",
+                cursor:         "pointer",
+                boxShadow:      isActive ? "0 2px 8px rgba(0,0,0,0.2)" : "none",
+                transition:     "all 0.18s ease",
+                letterSpacing:  "0.02em",
+                lineHeight:     "1.5",
+                whiteSpace:     "nowrap",
+              }}
+            >
+              {y}
+              {yearTotals[y] > 0 && (
+                <span style={{
+                  display:       "inline-flex",
+                  alignItems:    "center",
+                  justifyContent:"center",
+                  background:    isActive ? "rgba(255,255,255,0.25)" : "#e2e8f0",
+                  color:         isActive ? "#fff" : "#64748b",
+                  fontSize:      "0.65rem",
+                  fontWeight:    "800",
+                  padding:       "1px 6px",
+                  borderRadius:  "999px",
+                  minWidth:      "20px",
+                  lineHeight:    "1.5",
+                }}>
+                  {yearTotals[y]}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* ── Chart Canvas (responsive, fills container) ── */}
-      <div className="chart-canvas-wrap">
+      {/* ── Chart Canvas ── */}
+      <div style={{ position:"relative", width:"100%", height:"230px" }}>
         {filteredKeys.length > 0 ? (
-          <canvas ref={canvasRef} />
+          <canvas ref={canvasRef} style={{ width:"100%", height:"100%" }} />
         ) : (
-          <p className="no-data">Tidak ada data untuk tahun {selectedYear}</p>
+          <p style={{ textAlign:"center", color:"#94a3b8", fontSize:"0.85rem", paddingTop:"3rem" }}>
+            Tidak ada data untuk tahun {selectedYear}
+          </p>
         )}
       </div>
     </div>
@@ -279,7 +316,7 @@ function QueueSection({ sheetKey, sheetCfg, data, loading }) {
               {/* Statistik angka */}
               <div className="stat-row">
                 <StatCard label="Total Request" value={data?.total} icon="📋" variant="blue" />
-                <StatCard label="Selesai Dilayani" value={data?.done} icon="✅" variant="green" />
+                <StatCard label="Selesai" value={data?.done} icon="✅" variant="green" />
                 <StatCard label="Dalam Antrean" value={data?.inQueue} icon="⏳" variant="amber" />
               </div>
 

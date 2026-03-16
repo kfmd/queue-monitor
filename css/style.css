@@ -162,6 +162,9 @@ input, textarea, select { font-family: inherit; }
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
+  /* Prevent grid from stretching cards to fill remaining viewport height */
+  align-items: start;
+  align-content: start;
 }
 
 @media (min-width: 900px) {
@@ -466,6 +469,14 @@ input, textarea, select { font-family: inherit; }
   font-size: 0.8rem;
   line-height: 1.8;
 }
+
+.app-footer a {
+  color: rgba(255,255,255,0.75);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--transition);
+}
+.app-footer a:hover { color: #fff; }
 
 /* ── Spin animation ──────────────────────────────────────── */
 .spin { display: inline-block; animation: spin 0.75s linear infinite; }
@@ -943,6 +954,28 @@ input, textarea, select { font-family: inherit; }
   background: #fffbeb;
   border-color: #fcd34d;
   color: #78350f;
+}
+
+.btn-download-cfg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.6rem 1.25rem;
+  background: #0f3460;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  width: 100%;
+  justify-content: center;
+}
+.btn-download-cfg:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15,52,96,0.3);
 }
 
 /* ── Tombol utilitas ─────────────────────────────────────── */

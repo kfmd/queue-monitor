@@ -1,0 +1,42 @@
+{
+  "_comment": "File ini adalah konfigurasi bersama yang dibaca oleh semua perangkat. Edit melalui Admin Panel → Umum → Download config.json, lalu ganti file ini di server.",
+  "title": "Sistem Monitoring Antrean Humas RSU Islam Klaten",
+  "subtitle": "Dashboard Permintaan Desain · Video · Cetak",
+  "theme": {
+    "primary":   "#0f3460",
+    "secondary": "#533483",
+    "tertiary":  "#0d7c66",
+    "bg":        "#f0f4f8"
+  },
+  "password": "humas2024",
+  "refreshInterval": 300,
+  "sheets": {
+    "design": {
+      "name":         "Antrean Design",
+      "icon":         "✏️",
+      "editUrl":      "https://docs.google.com/spreadsheets/d/17TEWbeBaJzF38yfJxe3OMx3aJANIKHL1Y0bsj4pUDaI/edit?gid=1631778609#gid=1631778609",
+      "statusColumn": "O",
+      "dateColumn":   "B",
+      "startYear":    2023,
+      "color":        "#1a56db"
+    },
+    "video": {
+      "name":         "Antrean Dokumentasi/Video",
+      "icon":         "🎬",
+      "editUrl":      "https://docs.google.com/spreadsheets/d/1e9P8Sirx5rKjCWXGWUpTnzNMCICBlDbXmcQFIX85gxc/edit?gid=1623853028#gid=1623853028",
+      "statusColumn": "O",
+      "dateColumn":   "B",
+      "startYear":    2023,
+      "color":        "#7e3af2"
+    },
+    "printing": {
+      "name":         "Antrean Cetak Kolektif",
+      "icon":         "🖨️",
+      "editUrl":      "https://docs.google.com/spreadsheets/d/14bs2cmZeGFHFgWIAuQTCKgVqEK46CioihqjztVaHNzo/edit?gid=563013469#gid=563013469",
+      "statusColumn": "O",
+      "dateColumn":   "B",
+      "startYear":    2025,
+      "color":        "#057a55"
+    }
+  }
+}
