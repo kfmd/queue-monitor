@@ -850,20 +850,50 @@ input, textarea, select { font-family: inherit; }
   gap: 1rem;
 }
 
+/* Wrapper untuk picker + swatch + hex input */
+.color-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Native <input type="color"> — small square trigger */
+.color-pick {
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  padding: 2px;
+  cursor: pointer;
+  background: none;
+  flex-shrink: 0;
+}
+
+/* Live colour swatch preview */
+.color-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+}
+
+/* Hex text input — fixed width monospace */
+.color-hex-input {
+  width: 108px !important;
+  font-family: "DM Mono", "Fira Mono", "Consolas", monospace !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+  padding: 0.45rem 0.75rem !important;
+}
+
+/* Legacy — kept for any other .color-row usages */
 .color-row {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-}
-
-.color-pick {
-  width: 42px;
-  height: 36px;
-  border: none;
-  padding: 2px;
-  border-radius: 6px;
-  cursor: pointer;
-  background: none;
 }
 
 .color-chip {
@@ -875,7 +905,6 @@ input, textarea, select { font-family: inherit; }
   letter-spacing: 0.05em;
   min-width: 80px;
   text-align: center;
-  /* ensure readable */
   text-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
 

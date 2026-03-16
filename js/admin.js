@@ -203,6 +203,98 @@ function TabGeneral({ config, setConfig }) {
 }
 
 // ─────────────────────────────────────────────────────────
+// KOMPONEN: COLOR INPUT (picker + hex text box + preview)
+// ─────────────────────────────────────────────────────────
+function ColorInput({ value, onChange }) {
+  // Local hex text state — allows partial typing like "#1a5" without immediately breaking
+  const [hexText, setHexText] = useState(value || "#000000");
+
+  // Sync if parent value changes (e.g. on reset)
+  useEffect(() => { setHexText(value || "#000000"); }, [value]);
+
+  /** Validate and normalise a hex string → returns "#rrggbb" or null */
+  function toValidHex(raw) {
+    const s = raw.trim().replace(/^#+/, "");
+    if (/^[0-9a-fA-F]{6}$/.test(s)) return "#" + s.toLowerCase();
+    // Expand shorthand #rgb → #rrggbb
+    if (/^[0-9a-fA-F]{3}$/.test(s)) {
+      return "#" + s.split("").map(c => c + c).join("").toLowerCase();
+    }
+    return null;
+  }
+
+  function handleTextChange(e) {
+    const raw = e.target.value;
+    setHexText(raw);
+    const valid = toValidHex(raw);
+    if (valid) onChange(valid);
+  }
+
+  function handleTextBlur() {
+    // On blur: normalise display to valid hex or revert to current value
+    const valid = toValidHex(hexText);
+    if (valid) {
+      setHexText(valid);
+      onChange(valid);
+    } else {
+      setHexText(value); // revert to last known good value
+    }
+  }
+
+  function handlePickerChange(e) {
+    const v = e.target.value;
+    setHexText(v);
+    onChange(v);
+  }
+
+  // Determine text contrast for chip label
+  function isDark(hex) {
+    try {
+      const r = parseInt(hex.slice(1,3),16);
+      const g = parseInt(hex.slice(3,5),16);
+      const b = parseInt(hex.slice(5,7),16);
+      return (r*299 + g*587 + b*114) / 1000 < 128;
+    } catch(_) { return true; }
+  }
+
+  const currentValid = toValidHex(hexText) || value || "#000000";
+  const labelColor   = isDark(currentValid) ? "#fff" : "#1e293b";
+
+  return (
+    <div className="color-input-wrap">
+      {/* Native colour picker */}
+      <input
+        type="color"
+        className="color-pick"
+        value={currentValid}
+        onChange={handlePickerChange}
+        title="Buka color picker"
+      />
+
+      {/* Live preview swatch */}
+      <div
+        className="color-swatch"
+        style={{ background: currentValid }}
+        title={currentValid}
+      />
+
+      {/* Hex text field */}
+      <input
+        type="text"
+        className="field-input color-hex-input"
+        value={hexText}
+        onChange={handleTextChange}
+        onBlur={handleTextBlur}
+        placeholder="#000000"
+        maxLength={7}
+        spellCheck={false}
+        style={{ fontFamily: "monospace" }}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
 // TAB: SPREADSHEET
 // ─────────────────────────────────────────────────────────
 function TabSheets({ config, setConfig }) {
@@ -290,12 +382,10 @@ function TabSheets({ config, setConfig }) {
 
             <div className="field">
               <label className="field-label">Warna Kartu</label>
-              <div className="color-row">
-                <input type="color" className="color-pick"
-                  value={sheet.color}
-                  onChange={e => updateSheet(key, "color", e.target.value)} />
-                <span className="color-chip" style={{background: sheet.color}}>{sheet.color}</span>
-              </div>
+              <ColorInput
+                value={sheet.color}
+                onChange={v => updateSheet(key, "color", v)}
+              />
             </div>
           </section>
         );
@@ -327,14 +417,10 @@ function TabAppearance({ config, setConfig }) {
           {colors.map(({ key, label, hint }) => (
             <div key={key} className="field">
               <label className="field-label">{label}</label>
-              <div className="color-row">
-                <input type="color" className="color-pick"
-                  value={config.theme[key] || "#000000"}
-                  onChange={e => updateTheme(key, e.target.value)} />
-                <span className="color-chip" style={{background: config.theme[key]}}>
-                  {config.theme[key]}
-                </span>
-              </div>
+              <ColorInput
+                value={config.theme[key] || "#000000"}
+                onChange={v => updateTheme(key, v)}
+              />
               <span className="field-hint">{hint}</span>
             </div>
           ))}
