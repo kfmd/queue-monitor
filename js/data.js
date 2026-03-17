@@ -3,14 +3,13 @@
  *
  * SISTEM KONFIGURASI 3 TINGKAT — untuk sinkronisasi lintas perangkat:
  * ┌─────────────────────────────────────────────────────────────┐
- * │ Tingkat 1 (prioritas tertinggi): config.json               │
- * │   File di folder server — dibaca semua perangkat saat buka │
- * │   Update: Admin Panel → Download config.json → ganti file  │
+ * │ Tingkat 1 (terendah) : DEFAULT_CONFIG hardcoded             │
+ * │ Tingkat 2            : config.json  — baseline dari server  │
+ * │ Tingkat 3 (tertinggi): IndexedDB   — perubahan admin MENANG │
  * │                                                             │
- * │ Tingkat 2: IndexedDB (per perangkat)                        │
- * │   Menyimpan perubahan lokal / sesi sementara               │
- * │                                                             │
- * │ Tingkat 3 (fallback): DEFAULT_CONFIG hardcoded              │
+ * │ IndexedDB selalu menimpa config.json. Untuk menyebarkan     │
+ * │ perubahan ke perangkat lain: Admin → Download config.json   │
+ * │ → ganti file di server → semua perangkat refresh.           │
  * └─────────────────────────────────────────────────────────────┘
  */
 
@@ -84,50 +83,47 @@ window.QueueApp.Config = {
    *   2. IndexedDB   (override lokal perangkat ini)
    *   3. DEFAULT_CONFIG
    *
-   * config.json selalu menang atas IndexedDB untuk sinkronisasi lintas perangkat.
-   * Pengecualian: password dari IndexedDB dipertahankan (tidak ditimpa config.json
-   * agar password yang diubah admin tidak ter-reset saat ganti config lain).
+   * PRIORITAS (dari terendah ke tertinggi):
+   *   1. DEFAULT_CONFIG  — fallback hardcoded
+   *   2. config.json     — baseline bersama di server
+   *   3. IndexedDB       — perubahan admin (SELALU MENANG)
+   *
+   * IndexedDB menang atas config.json agar perubahan warna/URL/judul
+   * yang disimpan via admin panel langsung berlaku.
+   * Untuk sinkronisasi lintas perangkat: Download config.json dari admin
+   * → ganti file di server → perangkat lain baca config.json baru.
    */
   async load() {
     let base = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-    let fromFile = false;
 
-    // ── Tingkat 1: coba ambil config.json dari server ──────────────
+    // ── Tingkat 2: config.json (baseline bersama dari server) ──────
     try {
       const res = await fetch("./config.json?v=" + Date.now(), { cache: "no-cache" });
       if (res.ok) {
-        const fileText = await res.text();
-        // Abaikan jika bukan JSON valid
-        const fileJson = JSON.parse(fileText);
-        // Hapus _comment sebelum merge
+        const fileJson = JSON.parse(await res.text());
         delete fileJson._comment;
         base = this._merge(base, fileJson);
-        fromFile = true;
-        console.log("[Config] Dimuat dari config.json");
+        console.log("[Config] Baseline dari config.json");
       }
     } catch (e) {
-      console.info("[Config] config.json tidak ditemukan, pakai fallback:", e.message);
+      console.info("[Config] config.json tidak ditemukan:", e.message);
     }
 
-    // ── Tingkat 2: gabungkan dengan IndexedDB (hanya password) ────
-    // Jika config.json berhasil dimuat, hanya ambil password dari DB
-    // (agar password yang diubah tidak ikut di-reset oleh config.json)
+    // ── Tingkat 3: IndexedDB menimpa segalanya ─────────────────────
+    // Perubahan yang disimpan admin (warna, URL, judul, password, dll)
+    // selalu menimpa config.json sehingga langsung berlaku di halaman ini.
+    // Gunakan Download config.json untuk menyebarkan ke perangkat lain.
     try {
       const stored = await window.QueueApp.DB.getConfig();
       if (stored) {
-        if (fromFile) {
-          // Hanya pertahankan password dari IndexedDB
-          if (stored.password) base.password = stored.password;
-        } else {
-          // Tidak ada config.json → pakai penuh dari DB
-          base = this._merge(base, stored);
-        }
+        base = this._merge(base, stored);
+        console.log("[Config] Override dari IndexedDB diterapkan");
       }
     } catch (e) {
       console.warn("[Config] Gagal baca IndexedDB:", e);
     }
 
-    // Sync ke localStorage untuk startup cepat berikutnya
+    // Sync ke localStorage untuk startup sinkronis yang cepat
     try { localStorage.setItem(this.LS_KEY, JSON.stringify(base)); } catch (_) {}
     return base;
   },
